@@ -2,7 +2,7 @@
 
 This package provides mutable boolean, integer, rational, real and complex types. Their arithmetic operators are overloaded. The package also exports wrappers for the common math functions.
 
-The intent of these mutable types is for their use in immutable data structures that contain a field or fields that need the capability to have their values changed during runtime. For example, a data structure that holds material properties may include a boolean field 'ruptured' that would get turned on (converted from false to true) after a rupture event has occurred, thereafter enabling a change in material properties to take place moving forward.
+The intent of these mutable types is for their use in immutable data structures that contain a field or fields that need the capability to have their values changed during runtime. For example, a data structure that holds material properties may include a boolean field `ruptured` that would get turned on (converted from false to true) after a rupture event has occurred, thereafter enabling a change in material properties to take place moving forward.
 
 Mutable core types are based upon two abstract types; they are:
   * MType    \<: Number
@@ -15,7 +15,7 @@ Mutable data structures with a single field `n` are introduced; specifically:
   * MReal     \<: MNumber   \# `n::Float64`
   * MComplex  \<: MType   \# `n::Complex{Float64}`
 
-whose constructors look like a type casting, e.g., x = MReal\(2.5\).
+whose constructors look like a type casting, e.g., `x = MReal(2.5)`.
 
 Methods for retrieval and assignment of all concrete mutable types include:
   * get, set! and toString
