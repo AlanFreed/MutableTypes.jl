@@ -67,62 +67,11 @@ export
     exp,
     exp2,
     exp10
+
 #=
 --------------------------------------------------------------------------------
 =#
-"""
-# MutableTypes
 
-Mutable core types are based upon two abstract types; they are:
-• MType     <: Number
-• MNumber   <: MType
-
-Mutable data structures with a single field 'n' are introduced; specifically:
-• MBool     <: MType      # n::Bool
-• MInteger  <: MNumber    # n::Int64
-• MRational <: MNumber    # n::Rational{Int64}
-• MReal     <: MNumber    # n::Float64
-• MComplex  <: MType      # n::Complex{Float64}
-whose constructors look like a type casting, e.g., x = MReal(2.5).
-
-Methods for retrieval and assignment of all concrete mutable types include:
-• get, set! and toString
-
-Overloaded operators include:
-• MBool     ==, ≠, !
-• MInteger  ==, ≠, <, ≤, ≥, >, +, -, *, ÷, %, ^
-• MRational ==, ≠, <, ≤, ≥, >, +, -, *, //, /
-• MReal     ==, ≠, ≈, <, ≤, ≥, >, +, -, *, /, ^
-• MComplex  ==, ≠, ≈, +, -, *, /, ^
-
-Methods common to all concrete mutable types include:
-• copy and deepcopy
-
-A method for all numeric mutable types is:
-• abs
-
-A method for all non-complex, numeric, mutable types is:
-• sign
-
-Additional methods for the MRational type are:
-• numerator and denominator
-
-Additional methods for the MReal type are:
-• round, ceil, floor, cbrt or ∛, and atan(y,x)
-
-Additional methods for the MComplex type are:
-• abs2, real, imag, conj and angle
-
-Math functions whose arguments are of types MReal or MComplex include:
-• sqrt or √, sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh, log, log2, log10, exp, exp2 and exp10
-
-# Note
-Operators, methods and math functions pertaining to these types (except for copy and deepcopy) return instances belonging to their associated core types: Bool, Integer, Rational, Real or Complex. This is because their intended use is to permit mutable fields to be incorporated into what are otherwise immutable data structures; thereby, allowing such fields to have a potential to change their values. Mutable fields belonging to immutable data structures have the necessary infrastructure to be able to be used seamlessly in simple mathematical formula outside the data structure itself.
-"""
-MutableTypes
-#=
---------------------------------------------------------------------------------
-=#
 abstract type MType <: Number end
 
 abstract type MNumber <: MType end
@@ -146,30 +95,30 @@ end
 mutable struct MComplex <: MType
     n::Complex{Float64}  # Complex <: Number
 end
+
 #=
 --------------------------------------------------------------------------------
 =#
-# Operators and methods common to all instances of type MType.
 
-# Method get.
+# Method get
 
-function get(y::MBool)::Bool
+function Base.:(get)(y::MBool)::Bool
     return y.n
 end
 
-function get(y::MInteger)::Integer
+function Base.:(get)(y::MInteger)::Integer
     return y.n
 end
 
-function get(y::MRational)::Rational
+function Base.:(get)(y::MRational)::Rational
     return y.n
 end
 
-function get(y::MReal)::Real
+function Base.:(get)(y::MReal)::Real
     return y.n
 end
 
-function get(y::MComplex)::Complex
+function Base.:(get)(y::MComplex)::Complex
     return y.n
 end
 
@@ -200,31 +149,30 @@ function set!(y::MComplex, x::Complex)
     return nothing
 end
 
+#=
+--------------------------------------------------------------------------------
+=#
+
 # Method toString
 
-function toString(y::Bool)::String
-    return string(y)
-end
-
-"""
-    toString(y::Integer;
-             aligned::Bool=false)::String
-where `aligned` is to be set to true whenever a numeric string is to column align with other numeric strings, such as when printing out a matrix, i.e., it prints a space whenever `y` is non-negative.
-"""
-function toString(y::Integer; aligned::Bool=false)::String
+function toString(y::Bool; aligned::Bool=false)::String
     s = string(y)
-    if aligned && (y ≥ 0)
-        return string(" ", s)
+    if aligned && (y == true)
+        return string(' ', s)
     else
         return s
     end
 end
 
-"""
-    toString(y::Rational;
-             aligned::Bool=false)::String
-where `aligned` is to be set to true whenever a numeric string is to column align with other numeric strings, such as when printing out a matrix, i.e., it prints a space whenever `y` is non-negative.
-"""
+function toString(y::Integer; aligned::Bool=false)::String
+    s = string(y)
+    if aligned && (y ≥ 0)
+        return string(' ', s)
+    else
+        return s
+    end
+end
+
 function toString(y::Rational; aligned::Bool=false)::String
     s = string(y)
     if aligned && (y ≥ 0)
@@ -234,13 +182,6 @@ function toString(y::Rational; aligned::Bool=false)::String
     end
 end
 
-"""
-    toString(x::Real;
-             format::Char='E',
-             precsion::Int=5,
-             aligned::Bool=false)::String
-where `format` ∈ {'e', 'E', 'f', 'F'} ('e' or 'E' return exponential or scientific notation, and 'f' or 'F' return fixed-point notation), while `precsion` ∈ {3, …, 7} denotes the number of significant figures. Keyword `aligned` is to be set to true whenever a numeric string is to column align with other numeric strings, such as when printing out a matrix, i.e., it prints a space whenever `y` is non-negative. The returned string need not represent full precision of the actual floating-point number. Method toString is intended for printing out numbers for visual consumption.
-"""
 function toString(y::Real;
                   format::Char='E',
                   precision::Int=5,
@@ -383,13 +324,6 @@ function toString(y::Real;
     return s
 end
 
-"""
-    toString(x::Complex;
-             format::Char='E',
-             precsion::Int=5,
-             aligned::Bool=false)::String
-where `format` ∈ {'e', 'E', 'f', 'F'} ('e' or 'E' return exponential or scientific notation, and 'f' or 'F' return fixed-point notation), while `precsion` ∈ {3, …, 7} denotes the number of significant figures. Keyword `aligned` is to be set to true whenever a numeric string is to column align with other numeric strings, such as when printing out a matrix, i.e., it prints a space whenever `y` has a non-negative real part. The returned string need not represent full precision of the actual floating-point number. Method toString is intended for printing out numbers for visual consumption.
-"""
 function toString(y::Complex;
                   format::Char='E',
                   precision::Int=5,
@@ -404,11 +338,13 @@ function toString(y::Complex;
     end
     return str
 end
+
 #=
 --------------------------------------------------------------------------------
 =#
-function toString(y::MBool)::String
-    return toString(y.n)
+
+function toString(y::MBool; aligned::Bool=false)::String
+    return toString(y.n; aligned)
 end
 
 function toString(y::MInteger; aligned::Bool=false)::String
@@ -432,6 +368,10 @@ function toString(y::MComplex;
                   aligned::Bool=false)::String
     return toString(y.n; format, precision, aligned)
 end
+
+#=
+--------------------------------------------------------------------------------
+=#
 
 # Method copy
 
@@ -477,6 +417,10 @@ function Base.:(deepcopy)(y::MComplex)::MComplex
     return MComplex(deepcopy(y.n))
 end
 
+#=
+--------------------------------------------------------------------------------
+=#
+
 # Overloaded operators belonging to instances of type MType are: ==, ≠, ≈, !
 # Types Int64, Rational{Int64} and Float64 are all subtypes of type Real.
 
@@ -490,7 +434,7 @@ function Base.:(==)(y::MType, z::MType)::Bool
     end
 end
 
-function Base.:(==)(y::Union{Real,Complex}, z::MType)::Bool
+function Base.:(==)(y::Union{Bool,Real,Complex}, z::MType)::Bool
     if isequal(y, z.n)
         return true
     else
@@ -498,7 +442,7 @@ function Base.:(==)(y::Union{Real,Complex}, z::MType)::Bool
     end
 end
 
-function Base.:(==)(y::MType, z::Union{Real,Complex})::Bool
+function Base.:(==)(y::MType, z::Union{Bool,Real,Complex})::Bool
     if isequal(y.n, z)
         return true
     else
@@ -516,7 +460,7 @@ function Base.:≠(y::MType, z::MType)::Bool
     end
 end
 
-function Base.:≠(y::Union{Real,Complex}, z::MType)::Bool
+function Base.:≠(y::Union{Bool,Real,Complex}, z::MType)::Bool
     if isequal(y, z.n)
         return false
     else
@@ -524,7 +468,7 @@ function Base.:≠(y::Union{Real,Complex}, z::MType)::Bool
     end
 end
 
-function Base.:≠(y::MType, z::Union{Real,Complex})::Bool
+function Base.:≠(y::MType, z::Union{Bool,Real,Complex})::Bool
     if isequal(y.n, z)
         return false
     else
@@ -587,6 +531,10 @@ end
 function Base.:!(y::MBool)::Bool
     return !y.n
 end
+
+#=
+--------------------------------------------------------------------------------
+=#
 
 # Overloaded operators belonging to instances of MNumber are: <, ≤, ≥, >
 # Types Int64, Rational{Int64}, and Float64 are all subtypes of type Real.
@@ -1034,26 +982,6 @@ end
 
 function Base.:(//)(y::Integer, z::MRational)::Rational
     return y // z.n
-end
-
-function Base.:/(y::MRational, z::MRational)::Rational
-    return y.n / z.n
-end
-
-function Base.:/(y::Union{Integer, Rational}, z::MRational)::Rational
-    return y / z.n
-end
-
-function Base.:/(y::MRational, z::Union{Integer, Rational})::Rational
-    return y.n / z
-end
-
-function Base.:/(y::MRational, z::MInteger)::Rational
-    return  y.n / z.n
-end
-
-function Base.:/(y::MInteger, z::MRational)::Rational
-    return y.n / z.n
 end
 
 function Base.:/(y::MReal, z::MReal)::Real
