@@ -4,11 +4,11 @@ This package provides mutable boolean, integer, rational, real and complex types
 
 The intent of these mutable types is for their use in immutable data structures that contain a field or fields that need the capability to have their values changed during runtime. For example, a data structure that holds material properties may include a boolean field 'ruptured' that would get turned on (converted from false to true) after a rupture event has occurred, thereafter enabling a change in material properties to take place moving forward.
 
-To use this module you will need to add the following Julia package to yours:
+To use this module you will need to add it to your package:
 
 ```
 using Pkg
-Pkg.add(MutableTypes)
+Pkg.add(url = "https://github.com/AlanFreed/MutableTypes.jl")
 ```
 
 Mutable core types are based upon two abstract types; they are:
