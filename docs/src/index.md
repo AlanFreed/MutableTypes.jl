@@ -504,13 +504,12 @@ Function `floor()` returns the floor of the supplied real, i.e., the nearest int
 function Base.:(floor)(y::MReal)::Real
 ```
 
-### cbrt or ∛
+### cbrt
 
-Function `cbrt()`, or equivalently `∛()`, returns the cube root of the supplied real.
+Function `cbrt()` returns the cube root of the supplied real.
 
 ```
 function Base.Math.:(cbrt)(y::MNumber)::Real
-function Base.Math.:∛(y::MNumber)::Real
 ```
 
 ### atan
@@ -571,13 +570,11 @@ function Base.:(angle)(y::MComplex)::Real
 
 These functions extend their `Base` equivalents.
 
-Function `sqrt()`, or equivalently `√()`, returns the square root of the argument.
+Function `sqrt()` returns the square root of the argument.
 
 ```
 function Base.:(sqrt)(y::MNumber)::Real
 function Base.:(sqrt)(y::MComplex)::Complex
-function Base.:√(y::MNumber)::Real
-function Base.:√(y::MComplex)::Complex
 ```
 
 Function `sin()` returns the sine of the argument, which is in radians.

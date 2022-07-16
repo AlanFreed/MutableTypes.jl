@@ -1146,10 +1146,6 @@ function Base.Math.:(cbrt)(y::MNumber)::Real
     return cbrt(y.n)
 end
 
-function Base.Math.:∛(y::MNumber)::Real
-    return cbrt(y.n)
-end
-
 function Base.:(atan)(y::MNumber, x::MNumber)::Real
     return atan(y.n, x.n)
 end
@@ -1191,14 +1187,6 @@ function Base.:(sqrt)(y::MNumber)::Real
 end
 
 function Base.:(sqrt)(y::MComplex)::Complex
-    return sqrt(y.n)
-end
-
-function Base.:√(y::MNumber)::Real
-    return sqrt(y.n)
-end
-
-function Base.:√(y::MComplex)::Complex
     return sqrt(y.n)
 end
 
