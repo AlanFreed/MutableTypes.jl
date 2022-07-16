@@ -47,13 +47,13 @@ Additional methods for the MRational type are:
   * numerator and denominator
 
 Additional methods for the MReal type are:
-  * round, ceil, floor, cbrt or ∛, and atan(y,x)
+  * round, ceil, floor, cbrt and atan(y,x)
 
 Additional methods for the MComplex type are:
   * abs2, real, imag, conj and angle
 
 Math functions whose arguments are of types MReal or MComplex include:
-  * sqrt or √, sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh, log, log2, log10, exp, exp2 and exp10
+  * sqrt, sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh, log, log2, log10, exp, exp2 and exp10
 
 ## Note
 
