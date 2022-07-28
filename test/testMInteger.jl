@@ -44,8 +44,8 @@ function run()
     println("    deepcopy(j) = ", toString(deepcopy(j); aligned))
     println("    abs(i)      = ", toString(abs(i); aligned))
     println("    sign(i)     = ", toString(sign(i); aligned))
-    println("If these answers make sense, then this test passes.")
     println()
+    println("If these answers make sense, then this test passes.")
     return nothing
 end
 

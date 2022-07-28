@@ -28,8 +28,8 @@ function run()
     println("Reassigning the boolean in t to be false gives")
     set!(t, false)
     println("    t  is ", toString(t))
-    println("If these answers make sense, then this test passes.")
     println()
+    println("If these answers make sense, then this test passes.")
     return nothing
 end
 

@@ -71,11 +71,7 @@ function run()
     println("log(exp(z))     = ", toString(log(exp(z)); format, precision, aligned))
     println("log2(exp2(z))   = ", toString(log2(exp2(z)); format, precision, aligned))
     println("log10(exp10(z)) = ", toString(log10(exp10(z)); format, precision, aligned))
-    println("and finally, the square root is:")
-    println("sqrt(z) = ", toString(sqrt(z); format, precision, aligned))
-    println("√(z)    = ", toString(√(z); format, precision, aligned))
-    println("where")
-    println("sqrt(z) ^ 2 = ", toString(sqrt(z)^2; format, precision, aligned))
+    println()
     println("If these answers make sense, then this test passes.")
     return nothing
 end

@@ -35,7 +35,6 @@ function run()
     println("    2y     = ", toString(2y; aligned))
     println("    x * y  = ", toString(x*y; aligned))
     println("    x // y = ", toString(x//y; aligned))
-    println("    x / y  = ", toString(x/y; aligned))
     println("Reassigning y to -2//7 gives")
     set!(y, -get(y))
     println("    y      = ", toString(y; aligned))
@@ -46,8 +45,8 @@ function run()
     println("    sign(y)        = ", toString(sign(y); aligned))
     println("    numerator(y)   = ", toString(numerator(y); aligned))
     println("    denominator(y) = ", toString(denominator(y); aligned))
-    println("If these answers make sense, then this test passes.")
     println()
+    println("If these answers make sense, then this test passes.")
     return nothing
 end
 

@@ -38,8 +38,6 @@ export
     round,
     ceil,
     floor,
-    cbrt,
-    ∛,
     # Methods specific to the MComplex type.
     abs2,
     real,
@@ -47,8 +45,6 @@ export
     conj,
     angle,
     # Methods: basic math functions for MReal and MComplex types.
-    sqrt,
-    √,
     sin,
     cos,
     tan,
@@ -1142,10 +1138,6 @@ function Base.:(floor)(y::MReal)::Real
     return floor(y.n)
 end
 
-function Base.Math.:(cbrt)(y::MNumber)::Real
-    return cbrt(y.n)
-end
-
 function Base.:(atan)(y::MNumber, x::MNumber)::Real
     return atan(y.n, x.n)
 end
@@ -1181,14 +1173,6 @@ function Base.:(angle)(y::MComplex)::Real
 end
 
 # Math functions for types MNumber and MComplex
-
-function Base.:(sqrt)(y::MNumber)::Real
-    return sqrt(y.n)
-end
-
-function Base.:(sqrt)(y::MComplex)::Complex
-    return sqrt(y.n)
-end
 
 function Base.:(sin)(y::MNumber)::Real
     return sin(y.n)
