@@ -60,7 +60,9 @@ Math functions whose arguments are of types MReal or MComplex include:
 Operators, methods and math functions pertaining to these types \(except for copy and deepcopy\) return instances belonging to their associated core types: Bool, Integer, Rational, Real or Complex. This is because their intended use is to permit mutable fields to be incorporated into what are otherwise immutable data structures; thereby, allowing such fields to have a potential to change their values. Mutable fields belonging to immutable data structures have the necessary infrastructure to be able to be used seamlessly in simple mathematical formulae outside the data structure itself.
 
 There is an issue that arises whenever one attempts to overload functions `sqrt(x)` and `cbrt(x)` in that the compiler indicates that these functions overwrite themselves, causing the warning:
+
 `
 incremental compilation may be fatally broken for this module
 `
+
 consequently, write code `x^0.5` in place of `sqrt(x)` and `x^(1/3)` in place of `cbrt(x)` to circumvent this problem.
