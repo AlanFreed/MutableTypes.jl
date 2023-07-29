@@ -1,8 +1,15 @@
-
-
-[Return to Main Document](.\README.md)
-
 # MutableTypes
+
+This package provides mutable boolean, integer, rational, real and complex types. Their arithmetic operators are overloaded. The package also exports wrappers for the common math functions.
+
+The intent of these mutable types is for their use in immutable data structures that contain a field or fields that need the capability to have their values changed during runtime. For example, a data structure that holds material properties may include a boolean field 'ruptured' that would get turned on (converted from `false` to `true`) after a rupture event has occurred, thereafter enabling a change in material properties to take place moving forward.
+
+To use this module you will need to add it to your package:
+
+```
+using Pkg
+Pkg.add(url = "https://github.com/AlanFreed/MutableTypes.jl")
+```
 
 ## Abstract Types
 
@@ -45,8 +52,7 @@ mutable struct MRational <: MNumber
     n::Rational{Int64}  # Rational <: Real <: Number
 end
 ```
-There is also a helper type `LowerRational` that is used to assist in the reading and writing of `Rational` and `MRational` objects from and to JSON files. It is for internal use only.
-
+There is also a helper type `LowerRational` that is used to assist in the reading and writing of `Rational` and `MRational` objects from and to JSON files. This type is intended for internal use only.
 
 Mutable real numbers belong to the type:
 
@@ -63,7 +69,7 @@ mutable struct MComplex <: MType
     n::Complex{Float64}  # Complex <: Number
 end
 ```
-There is also a helper type `LowerComplex` that is used to assist in the reading and writing of `Complex` and `MComplex` objects from and to JSON files. It is for internal use only.
+There is also a helper type `LowerComplex` that is used to assist in the reading and writing of `Complex` and `MComplex` objects from and to JSON files. This type is intended for internal use only.
 
 ### Constructors
 
@@ -117,9 +123,9 @@ To open an existing JSON file for reading, one can call
 ```
 function openJSONReader(my_dir_path::String, my_file_name::String)::IOStream
 ```
-e.g., `json_stream = openJSONReader("home/my_dir", "my_file.json").` This reader attaches to a file located in directory `my_dir_path` whose name is `my_file_name` ending with a `.json` extension. The file is opened in read-only mode. This reader points to the beginning of the file.
+e.g., `json_stream = openJSONReader("home/my_dir", "my_file.json").` This reader attaches to a file located in directory `my_dir_path` whose name is `my_file_name` ending with a `.json` extension. The file is opened in read-only mode. This reader points to the beginning of the file at its creation.
 
-To create a new or open an existing JSON file for writing, one can call
+To create a new, or open an existing JSON file for writing, one can call
 ```
 function openJSONWriter(my_dir_path::String, my_file_name::String)::IOStream
 ```
@@ -130,37 +136,24 @@ To close the file to which a JSON stream is attached, simply call
 function closeJSONStream(json_stream::IOStream)
 ```
 
-#### fromFile!
+Methods have been created for reading and writing that take advantage of the multiple dispatch capability of the Julia compiler. The chosen protocal requires that one knows the type belonging to an object to be read in before it can actually be read in. As implemented, the JSON stream does not store type information.
 
-Methods have been created for reading and writing to take advantage of the multiple dispatch capability of the Julia compiler. This does require that one knows the type belonging to an object to be read in before it can actually be read in. The JSON stream does not store this information.
+#### fromFile
 
-To read in the Julia built-in types from a JSON file, one can call
+To read from a JSON file the mutable types of this module, and their Julia built-in counterparts, one can call the method
 ```
-function fromFile!(y::Bool, json_stream::IOStream)
-function fromFile!(y::Integer, json_stream::IOStream)
-function fromFile!(y::Rational, json_stream::IOStream)
-function fromFile!(y::Real, json_stream::IOStream)
-function fromFile!(y::Complex, json_stream::IOStream)
+function fromFile(type::Type, json_stream::IOStream)::Union{String, Number}
 ```
-where all integer values are read in as `Int64` objects, and all real values are read in as `Float64` objects.
+where admissible types `type` for reading from a JSON file include: `String,` `Bool,` `MBool,` `Integer,` `MInteger,` `Rational,` `MRational,` `Real,` `MReal,` `Complex` and `MComplex.` All integer values are read in as `Int64` objects, and all real values are read in as `Float64` objects.
+Argument `json_stream` comes from a call to `openJSONReader.`
 
-Likewise, to read in the mutable versions of these built-in types from a JSON file, one can call
-```
-function fromFile!(y::MBool, json_stream::IOStream)
-function fromFile!(y::MInteger, json_stream::IOStream)
-function fromFile!(y::MRational, json_stream::IOStream)
-function fromFile!(y::MReal, json_stream::IOStream)
-function fromFile!(y::MComplex, json_stream::IOStream)
-```
-where, e.g., the `json_stream` comes from a call to `openJSONReader.`
-
-As these methods require the type to be read in as a known entity, the user must create instances of these mutable types prior to reading in their values from file. This is best done using constructors without arguments, e.g., creating `y = MBool()` and then calling `fromFile!(y, my_json_stream)` to assign `y` its boolean value.
+These methods require the type to be read in to be a known entity, fore which a call to this method returns an object of the specified type.
 
 #### toFile
 
-To write the Julia built-in types to a JSON file, one can call
+To write the Julia built-in types to a JSON file, one can call the method
 ```
-function toFile(y:Bool, json_stream::IOStream)
+function toFile(y::Bool, json_stream::IOStream)
 function toFile(y::Integer, json_stream::IOStream)
 function toFile(y::Rational, json_stream::IOBuffer)
 function toFile(y::Real, json_stream::IOBuffer)
@@ -176,12 +169,11 @@ function toFile(y::MRational, json_stream::IOBuffer)
 function toFile(y::MReal, json_stream::IOBuffer)
 function toFile(y::MComplex, json_stream::IOBuffer)
 ```
-where, e.g., the `json_stream` comes from a call to `openJSONWriter.`
-
+Argument `json_stream` comes from a call to `openJSONWriter.`
 
 #### toString
 
-There is also a method that converts the basic built-in types of the Julia language and their mutable versions into human readable strings for printing. No parsing method is provided for the reverse process; this is the purview of `fromFile!.` For the case of real and complex numbers, the actual values are truncated in their string representations. This is consistent with the intent of method `toString` being for human consumption.
+There is also a method that converts the basic built-in types of the Julia language and their mutable versions into human readable strings for printing. No parsing method is provided for the reverse process; this is the purview of `fromFile.` For the case of real and complex numbers, the actual values are truncated in their string representations. This is consistent with the intent of method `toString` being for human consumption.
 
 Methods that convert the standard core objects into human readable strings include:
 
@@ -215,15 +207,15 @@ function toString(y::MComplex;
                   aligned::Bool=false)::String
 ```
 
-For the various `toString` methods listed above, their keywords are given default values that can be overwritten. Specifically, 
+For the various `toString` interfaces listed above, their keywords are given default values that can be overwritten. Specifically, 
 
 * `format`: An exponential or scientific output will be written whenever `format` is set to `e` or `E`; otherwise, the output will be written in a fixed-point notation.
 * `precision`: The number of significant figures to be used in a numeric representation, precision ∈ {3, …, 7}.
 * `aligned`: If `true`, a white space will appear before `true` when converting a `MBool` to string, or a white space will appear before the first digit in a number whenever its value is non-negative. Aligning is useful, e.g., when stacking outputs, like when printing out a matrix as a string.
 
-### Methods
+## Methods
 
-#### get
+### get
 
 Methods that retrieve the fundamental value held by field `n` belonging to a mutable object `y` include: 
 
@@ -235,7 +227,7 @@ function Base.:(get)(y::MReal)::Real
 function Base.:(get)(y::MComplex)::Complex
 ```
 
-#### set!
+### set!
 
 Methods that assign a fundamental value `x` to field `n` belonging to a mutable object `y` include:
 
@@ -247,7 +239,7 @@ function set!(y::MReal, x::Real)
 function set!(y::MComplex, x::Complex)
 ```
 
-#### copy
+### copy
 
 Methods that make shallow copies of mutable types include:
 
@@ -259,7 +251,7 @@ function Base.:(copy)(y::MReal)::MReal
 function Base.:(copy)(y::MComplex)::MComplex
 ```
 
-#### deepcopy
+### deepcopy
 
 Methods that make deep copies of mutable types include:
 
@@ -271,21 +263,21 @@ function Base.:(deepcopy)(y::MReal)::MReal
 function Base.:(deepcopy)(y::MComplex)::MComplex
 ```
 
-### Overloaded Operators
+## Overloaded Operators
 
-  * `MBool`: ==, ≠, \!
+  * `MBool:`		==, ≠, \!
 
-  * `MInteger`: ==, ≠, \<, ≤, ≥, \>, \+, \-, \*, ÷, %, ^
+  * `MInteger:`		==, ≠, \<, ≤, ≥, \>, \+, \-, \*, ÷, %, ^
 
-  * `MRational`: ==, ≠, \<, ≤, ≥, \>, \+, \-, \*, //, /
+  * `MRational:`	==, ≠, \<, ≤, ≥, \>, \+, \-, \*, //, /, ^
 
-  * `MReal`: ==, ≠, ≈, \<, ≤, ≥, \>, \+, \-, \*, /, ^
+  * `MReal:`		==, ≠, ≈, \<, ≤, ≥, \>, \+, \-, \*, /, ^
 
-  * `MComplex`: ==, ≠, ≈, \+, \-, \*, /, ^
+  * `MComplex:`		==, ≠, ≈, \+, \-, \*, /, ^
 
-### Math Functions
+## Math Functions
 
-#### A method for all numeric mutable types is:
+### A method for all numeric mutable types is:
 
 ```
 function Base.:(abs)(y::MInteger)::Integer
@@ -294,13 +286,13 @@ function Base.:(abs)(y::MReal)::Real
 function Base.:(abs)(y::MComplex)::Complex
 ```
 
-#### A method for all non-complex, numeric, mutable types is:
+### A method for all non-complex, numeric, mutable types is:
 
 ```
 function Base.:(sign)(y::MNumber)::Real
 ```
 
-#### Additional methods for the `MRational` type are:
+### Additional methods for the `MRational` type are:
 
 ```
 function Base.:(numerator)(y::MRational)::Integer
@@ -310,7 +302,7 @@ function Base.:(numerator)(y::MRational)::Integer
 function Base.:(denominator)(y::MRational)::Integer
 ```
 
-#### Additional methods for the `MReal` type are:
+### Additional methods for the `MReal` type are:
 
 ```
 function Base.:(round)(y::MReal)::Real
@@ -332,7 +324,7 @@ function Base.:(atan)(y::Real, x::MNumber)::Real
 
 where `y` is the rise and `x` is the run in these `atan` methods.
 
-#### Additional methods for the `MComplex` type are:
+### Additional methods for the `MComplex` type are:
 
 ```
 function Base.:(abs2)(y::MComplex)::Real
@@ -354,7 +346,7 @@ function Base.:(conj)(y::MComplex)::Complex
 function Base.:(angle)(y::MComplex)::Real
 ```
 
-#### Math functions whose arguments can be of types `MNumber` or `MComplex` include:
+### Math functions whose arguments can be of types `MNumber` or `MComplex` include:
 
 ```
 function Base.:(sqrt)(y::MNumber)::Real
@@ -451,10 +443,18 @@ function Base.:(exp10)(y::MNumber)::Real
 function Base.:(exp10)(y::MComplex)::Complex
 ```
 
-### Notes
+## Notes
 
-Methods, operators and math functions pertaining to these types (except for `copy` and `deepcopy`) return instances belonging to their associated core types: viz., `Bool`, `Integer`, `Rational`, `Real` or `Complex`. This is because their intended use is to permit mutable fields to be incorporated into what are otherwise immutable data structures; thereby, allowing such fields to have a potential to change their values. Mutable fields belonging to immutable data structures have the necessary infrastructure to be able to be used seamlessly in simple mathematical formulae outside the data structure itself.
+Methods, operators and math functions pertaining to these types (except for `copy` and `deepcopy`) return instances belonging to their associated core types: viz., `Bool,` `Integer,` `Rational,` `Real` or `Complex`. This is because their intended use is to permit mutable fields to be incorporated into what are otherwise immutable data structures; thereby, allowing such fields to have a potential to change their values. Mutable fields belonging to immutable data structures have the necessary infrastructure to be able to be used seamlessly in simple mathematical formulae outside the data structure itself.
 
-[Previous Page](.\README.md)
+## Updates
 
-[Next Page](.\README_PhysicalUnits.md)
+### Version 0.2.0
+
+All constructors were made internal. They can accept: no argument, one argument, or in the cases of rational and complex, they can accept two arguments, too. External constructors no longer exist.
+
+Added functions to read and write the mutable types of this module, and their built-in counterparts, from or to a JSON file. Specifically, functions `openJSONReader`, `openJSONWriter` and `closeJSONStream`, and methods `toFile` and `fromFile` were added to the API.
+
+### Version 0.1.0
+
+Initial release.
