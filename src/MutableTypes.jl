@@ -1,99 +1,302 @@
 module MutableTypes
 
 import
-    Printf: @sprintf
+    Base: ==, ≠, ≈, !, <, ≤, ≥, >, +, -, *, ÷, %, //, /, ^
+
+import
+    Base: abs, copy, deepcopy, get, sign,           # basic functions
+          denominator, numerator,                   # for rationals
+          ceil, floor, round,                       # for reals
+          abs2, angle, conj, imag, real,            # for complex
+          cos, cosh, sin, sinh, tan, tanh, sqrt,    # trig functions
+          acos, acosh, asin, asinh, atan, atanh,    # inverse trig functions
+          log, log2, log10, exp, exp2, exp10        # log-exponential functions
+    # Function atan can be either of the form atan(x) or of form atan(y,x).
+
+import
+    Printf:
+        @sprintf
+
+using
+    JSON3,
+    StructTypes
 
 export
-    # Abstract types
-    MType,              # <: Number,  the base type for mutable types.
-    MNumber,            # <: MType,   the base type for mutable numbers.
-    # Concrete types
-    MBool,              # <: MType,   a mutable boolean.
-    MInteger,           # <: MNumber, a mutable integer number.
-    MRational,          # <: MNumber, a mutable rational number.
-    MReal,              # <: MNumber, a mutable real/floating-point number.
-    MComplex,           # <: MType,   a mutable complex number.
-    # Assignment methods
-    get,                # Returns the value held by an object of mutable type.
-    set!,               # Assigns a value to an object of mutable type.
-    toString,           # Converts the mutable type into a string for reading.
-    # Overloaded opeartors
-    #   MBool           ==, ≠, !
-    #   MInteger        ==, ≠, <, ≤, ≥, >, +, -, *, ÷, %, ^
-    #   MRational       ==, ≠, <, ≤, ≥, >, +, -, *, //, /
-    #   MReal           ==, ≠, ≈, <, ≤, ≥, >, +, -, *, /, ^
+    # abstract types
 
-    #   MComplex        ==, ≠, ≈, +, -, *, /, ^
-    # Methods: common to all concrete types, returning their mutable type.
-    copy,
-    deepcopy,
-    # Method: common to all numeric types, returning their parent type.
-    abs,
-    # Method: common to all non-complex numeric types, returning a real.
-    sign,
-    # Methods specific to the MRational type, returning an integer.
-    numerator,
-    denominator,
-    # Methods specific to the MReal type, returning a real.
-    round,
-    ceil,
-    floor,
-    # Methods specific to the MComplex type.
-    abs2,
-    real,
-    imag,
-    conj,
-    angle,
-    # Methods: basic math functions for MReal and MComplex types.
-    sin,
-    cos,
-    tan,
-    asin,
-    acos,
-    atan,
-    sinh,
-    cosh,
-    tanh,
-    asinh,
-    acosh,
-    atanh,
-    log,
-    log2,
-    log10,
-    exp,
-    exp2,
-    exp10
+    MType,                  # <: Number,  the base type for mutable types.
+    MNumber,                # <: MType,   the base type for mutable numbers.
+
+    # concrete types
+
+    MBool,                  # <: MType,   a mutable boolean.
+    MInteger,               # <: MNumber, a mutable integer number.
+    MRational,              # <: MNumber, a mutable rational number.
+    MReal,                  # <: MNumber, a mutable real/floating-point number.
+    MComplex,               # <: MType,   a mutable complex number.
+
+    # hidden types not intended for external use
+
+    LowerRational,          # <: Real
+    LowerComplex,           # <: Number
+
+    # methods
+
+    set!,
+    toString,
+
+    # reading from and writing to files
+
+    openJSONReader,
+    openJSONWriter,
+    closeJSONStream,
+
+    # methods for reading and writing all built-in and mutable types
+
+    toFile,
+    fromFile
 
 #=
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 =#
+
+# Helper types used for reading and writing objects from/to a JSON3.jl file.
+# These lower types are not intended for general use.
+
+mutable struct LowerRational <: Real
+    num::Int64  # Int64 <: Signed <: Integer <: Real <: Number
+    den::Int64  # Int64 <: Signed <: Integer <: Real <: Number
+
+    # constructors
+
+    function LowerRational()
+        new(convert(Int64, 0), convert(Int64, 1))
+    end
+
+    function LowerRational(r::Rational)
+        new(convert(Int64, numerator(r)), convert(Int64, denominator(r)))
+    end
+
+    function LowerRational(num::Integer, den::Integer)
+        num = convert(Int64, num)
+        den = convert(Int64, den)
+        # Code came from a Case Study of Constructors at docs.JuliaLang.org.
+        if num == 0 && den == 0
+            msg = "invalid rational: 0//0"
+            throw(ErrorException(msg))
+        end
+        num = flipsign(num, den)
+        den = flipsign(den, den)
+        g   = gcd(num, den)
+        num = div(num, g)
+        den = div(den, g)
+        new(num, den)
+    end
+end
+
+mutable struct LowerComplex <: Number
+    real_part::Float64  # Float64 <: AbstractFloat <: Real <: Number
+    imag_part::Float64  # Float64 <: AbstractFloat <: Real <: Number
+
+    # constructors
+
+    function LowerComplex()
+        new(convert(Float64, 0.0), convert(Float64, 0.0))
+    end
+
+    function LowerComplex(c::Complex)
+        new(convert(Float64, real(c)), convert(Float64, imag(c)))
+    end
+
+    function LowerComplex(real_part::Real, imag_part::Real)
+        real_part = convert(Float64, real_part)
+        imag_part = convert(Float64, imag_part)
+        new(real_part, imag_part)
+    end
+end
+
+#=
+-------------------------------------------------------------------------------
+=#
+
+# Exported types
 
 abstract type MType <: Number end
 
 abstract type MNumber <: MType end
 
+# All constructors are internal for instances of MType.
+
 mutable struct MBool <: MType
     n::Bool  # Bool <: Integer <: Real <: Number
+
+    # constructors
+
+    function MBool()
+        new(false)
+    end
+
+    function MBool(b::Bool)
+        new(b)
+    end
 end
 
 mutable struct MInteger <: MNumber
     n::Int64  # Int64 <: Signed <: Integer <: Real <: Number
+
+    # constructors
+
+    function MInteger()
+        new(convert(Int64, 0))
+    end
+
+    function MInteger(i::Integer)
+        new(convert(Int64, i))
+    end
 end
 
 mutable struct MRational <: MNumber
     n::Rational{Int64}  # Rational <: Real <: Number
+
+    # constructors
+
+    function MRational()
+        new(convert(Rational{Int64}, 0//1))
+    end
+
+    function MRational(r::Rational)
+        new(convert(Rational{Int64}, r))
+    end
+
+    function MRational(lr::LowerRational)
+        new(lr.num//lr.den)
+    end
+
+    function MRational(num::Integer, den::Integer)
+        num = convert(Int64, num)
+        den = convert(Int64, den)
+        # Code came from a Case Study of Constructors at docs.JuliaLang.org.
+        if num == 0 && den == 0
+            msg = "invalid rational: 0//0"
+            throw(ErrorException(msg))
+        end
+        num = flipsign(num, den)
+        den = flipsign(den, den)
+        g   = gcd(num, den)
+        num = div(num, g)
+        den = div(den, g)
+        new(num//den)
+    end
 end
 
 mutable struct MReal <: MNumber
     n::Float64  # Float64 <: AbstractFloat <: Real <: Number
+
+    # constructors
+
+    function MReal()
+        new(convert(Float64, 0.0))
+    end
+
+    function MReal(r::Real)
+        new(convert(Float64, r))
+    end
 end
 
 mutable struct MComplex <: MType
     n::Complex{Float64}  # Complex <: Number
+
+    # constructors
+
+    function MComplex()
+        new(convert(Complex{Float64}, 0.0))
+    end
+
+    function MComplex(c::Complex)
+        new(convert(Complex{Float64}, c))
+    end
+
+    function MComplex(lc::LowerComplex)
+        new(lc.real_part + im*lc.imag_part)
+    end
+
+    function MComplex(real_part::Real, imag_part::Real)
+        real_part = convert(Float64, real_part)
+        imag_part = convert(Float64, imag_part)
+        new(real_part + im*imag_part)
+    end
+end
+
+# Methods required to serialize (write to file) instances of these types.
+
+function Base.:(Bool)(mb::MBool)::Bool
+    return mb.n
+end
+
+function Base.:(Int64)(mi::MInteger)::Int64
+    return mi.n
+end
+
+function Base.:(Rational)(lr::LowerRational)::Rational{Int64}
+    return lr.num//lr.den
+end
+
+function Base.:(Rational)(mr::MRational)::Rational{Int64}
+    return mr.n
+end
+
+function Base.:(Float64)(mr::MReal)::Float64
+    return mr.n
+end
+
+function Base.:(Complex)(lc::LowerComplex)::Complex{Float64}
+    return lc.real_part + im*lc.imag_part
+end
+
+function Base.:(Complex)(mc::MComplex)::Complex{Float64}
+    return mc.n
 end
 
 #=
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+=#
+
+# Type declarations needed to work with JSON3 files.
+
+StructTypes.StructType(::Type{MBool}) = StructTypes.Mutable()
+
+StructTypes.StructType(::Type{MInteger}) = StructTypes.Mutable()
+
+StructTypes.StructType(::Type{MReal}) = StructTypes.Mutable()
+
+StructTypes.StructType(::Type{LowerRational}) = StructTypes.Struct()
+StructTypes.serializationname(::Type{LowerRational}) = ((:"num", :"num"), (:"den", :"den"))
+
+StructTypes.StructType(::Type{Rational}) = StructTypes.CustomStruct()
+StructTypes.lowertype(Rational) = LowerRational
+StructTypes.lower(x::Rational) = LowerRational(numerator(x.n), denominator(x.n))
+StructTypes.construct(Rational, num::Integer, den::Integer) = Rational(num, den)
+
+StructTypes.StructType(::Type{MRational}) = StructTypes.CustomStruct()
+StructTypes.lowertype(MRational) = LowerRational
+StructTypes.lower(x::MRational) = LowerRational(numerator(x.n), denominator(x.n))
+StructTypes.construct(MRational, num::Integer, den::Integer) = MRational(num, den)
+
+StructTypes.StructType(::Type{LowerComplex}) = StructTypes.Struct()
+StructTypes.serializationname(::Type{LowerComplex}) = ((:"real_part", :"real_part"), (:"imag_part", :"imag_part"))
+
+StructTypes.StructType(::Type{Complex}) = StructTypes.CustomStruct()
+StructTypes.lowertype(Complex) = LowerComplex
+StructTypes.lower(x::Complex) = LowerComplex(real(x.n), imag(x.n))
+StructTypes.construct(Complex, real_part::Real, imag_part::Real) = Complex(real_part, imag_part)
+
+StructTypes.StructType(::Type{MComplex}) = StructTypes.CustomStruct()
+StructTypes.lowertype(MComplex) = LowerComplex
+StructTypes.lower(x::MComplex) = LowerComplex(real(x.n), imag(x.n))
+StructTypes.construct(MComplex, real_part::Real, imag_part::Real) = MComplex(real_part, imag_part)
+
+#=
+-------------------------------------------------------------------------------
 =#
 
 # Method get
@@ -146,7 +349,7 @@ function set!(y::MComplex, x::Complex)
 end
 
 #=
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 =#
 
 # Method toString
@@ -336,7 +539,7 @@ function toString(y::Complex;
 end
 
 #=
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 =#
 
 function toString(y::MBool; aligned::Bool=false)::String
@@ -366,7 +569,339 @@ function toString(y::MComplex;
 end
 
 #=
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+=#
+
+function openJSONReader(my_dir_path::String, my_file_name::String)::IOStream
+    if !isdir(my_dir_path)
+        msg = "The specified directory path is not a valid directory."
+        throw(ErrorException(msg))
+    end
+    (name, extension) = splitext(my_file_name)
+    file_name = string(name, ".json")
+    my_file = string(my_dir_path, file_name)
+    if isfile(my_file)
+        json_stream = open(my_file; lock=true, read=true, write=false, create=false, truncate=false, append=false)
+    else
+        msg = "The specified file does not exist in the specified directory."
+        throw(ErrorException(msg))
+    end
+    return json_stream
+end
+
+function openJSONWriter(my_dir_path::String, my_file_name::String)::IOStream
+    if !isdir(my_dir_path)
+        msg = "The specified directory path is not a valid directory."
+        throw(ErrorException(msg))
+    end
+    (name, extension) = splitext(my_file_name)
+    file_name = string(name, ".json")
+    my_file = string(my_dir_path, file_name)
+    if isfile(my_file)
+        json_stream = open(my_file; lock=true, read=false, write=true, create=false, truncate=true, append=true)
+    else
+        json_stream = open(my_file; lock=true, read=false, write=true, create=true, truncate=true, append=true)
+    end
+    seekstart(json_stream)
+    return json_stream
+end
+
+function closeJSONStream(json_stream::IOStream)
+    if isopen(json_stream)
+        close(json_stream)
+    end
+    return nothing
+end
+
+# Write the built-in types in their 64-bit format to a JSON file.
+
+function toFile(y::String, json_stream::IOStream)
+    if isopen(json_stream)
+        JSON3.write(json_stream, y)
+        write(json_stream, '\n')
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    flush(json_stream)
+    return nothing
+end
+
+function toFile(y::Bool, json_stream::IOStream)
+    if isopen(json_stream)
+        JSON3.write(json_stream, y)
+        write(json_stream, '\n')
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    flush(json_stream)
+    return nothing
+end
+
+function toFile(y::Integer, json_stream::IOStream)
+    if isopen(json_stream)
+        JSON3.write(json_stream, convert(Int64, y))
+        write(json_stream, '\n')
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    flush(json_stream)
+    return nothing
+end
+
+function toFile(y::Rational, json_stream::IOStream)
+    if isopen(json_stream)
+        lr = LowerRational(y)
+        JSON3.write(json_stream, lr)
+        write(json_stream, '\n')
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    flush(json_stream)
+    return nothing
+end
+
+function toFile(y::Real, json_stream::IOStream)
+    if isopen(json_stream)
+        JSON3.write(json_stream, convert(Float64, y))
+        write(json_stream, '\n')
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    flush(json_stream)
+    return nothing
+end
+
+function toFile(y::Complex, json_stream::IOStream)
+    if isopen(json_stream)
+        lc = LowerComplex(y)
+        JSON3.write(json_stream, lc)
+        write(json_stream, '\n')
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    flush(json_stream)
+    return nothing
+end
+
+# Write the mutable versions of these built-in types to a JSON file.
+
+function toFile(y::MBool, json_stream::IOStream)
+    if isopen(json_stream)
+        JSON3.write(json_stream, y)
+        write(json_stream, '\n')
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    flush(json_stream)
+    return nothing
+end
+
+function toFile(y::MInteger, json_stream::IOStream)
+    if isopen(json_stream)
+        JSON3.write(json_stream, y)
+        write(json_stream, '\n')
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    flush(json_stream)
+    return nothing
+end
+
+function toFile(y::MRational, json_stream::IOStream)
+    if isopen(json_stream)
+        JSON3.write(json_stream, y)
+        write(json_stream, '\n')
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    flush(json_stream)
+    return nothing
+end
+
+function toFile(y::MReal, json_stream::IOStream)
+    if isopen(json_stream)
+        JSON3.write(json_stream, y)
+        write(json_stream, '\n')
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    flush(json_stream)
+    return nothing
+end
+
+function toFile(y::MComplex, json_stream::IOStream)
+    if isopen(json_stream)
+        JSON3.write(json_stream, y)
+        write(json_stream, '\n')
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    flush(json_stream)
+    return nothing
+end
+
+# Read the built-in types from a JSON file.
+
+
+function _readString(json_stream::IOStream)::String
+    if isopen(json_stream)
+        y = JSON3.read(readline(json_stream), String)
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    return y
+end
+
+function _readBool(json_stream::IOStream)::Bool
+    if isopen(json_stream)
+        y = JSON3.read(readline(json_stream), Bool)
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    return y
+end
+
+function _readInteger(json_stream::IOStream)::Integer
+    if isopen(json_stream)
+        y = JSON3.read(readline(json_stream), Int64)
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    return y
+end
+
+function _readRational(json_stream::IOStream)::Rational
+    if isopen(json_stream)
+        r = JSON3.read(readline(json_stream), LowerRational)
+        y = Rational(r)
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    return y
+end
+
+function _readReal(json_stream::IOStream)::Real
+    if isopen(json_stream)
+        y = JSON3.read(readline(json_stream), Float64)
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    return y
+end
+
+function _readComplex(json_stream::IOStream)::Complex
+    if isopen(json_stream)
+        c = JSON3.read(readline(json_stream), LowerComplex)
+        y = Complex(c)
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    return y
+end
+
+# Read the mutable versions of these built-in types from a JSON file.
+
+function _readMBool(json_stream::IOStream)::MBool
+    if isopen(json_stream)
+        y = JSON3.read(readline(json_stream), MBool)
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    return y
+end
+
+function _readMInteger(json_stream::IOStream)::MInteger
+    if isopen(json_stream)
+        y = JSON3.read(readline(json_stream), MInteger)
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    return y
+end
+
+function _readMRational(json_stream::IOStream)::MRational
+    if isopen(json_stream)
+        r = JSON3.read(readline(json_stream), LowerRational)
+        y = MRational(r)
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    return y
+end
+
+function _readMReal(json_stream::IOStream)::MReal
+    if isopen(json_stream)
+        y = JSON3.read(readline(json_stream), MReal)
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    return y
+end
+
+function _readMComplex(json_stream::IOStream)::MComplex
+    if isopen(json_stream)
+        c = JSON3.read(readline(json_stream), LowerComplex)
+        y = MComplex(c)
+    else
+        msg = "The supplied JSON stream is not open."
+        throw(ErrorException(msg))
+    end
+    return y
+end
+
+function fromFile(type::Type, json_stream::IOStream)::Union{String, Number}
+    if isa(type, Type{String})
+        y = _readString(json_stream)
+    elseif isa(type, Type{Bool})
+        y = _readBool(json_stream)
+    elseif isa(type, Type{Integer})
+        y = _readInteger(json_stream)
+    elseif isa(type, Type{Rational})
+        y = _readRational(json_stream)
+    elseif isa(type, Type{Real})
+        y = _readReal(json_stream)
+    elseif isa(type, Type{Complex})
+        y = _readComplex(json_stream)
+    elseif isa(type, Type{MBool})
+        y = _readMBool(json_stream)
+    elseif isa(type, Type{MInteger})
+        y = _readMInteger(json_stream)
+    elseif isa(type, Type{MRational})
+        y = _readMRational(json_stream)
+    elseif isa(type, Type{MReal})
+        y = _readMReal(json_stream)
+    elseif isa(type, Type{MComplex})
+        y = _readMComplex(json_stream)
+    else
+        msg = "Unrecognized type for reading 'fromFile' a JSON file."
+        throw(ErrorException(msg))
+    end
+    return y
+end
+
+#=
+-------------------------------------------------------------------------------
 =#
 
 # Method copy
@@ -414,11 +949,11 @@ function Base.:(deepcopy)(y::MComplex)::MComplex
 end
 
 #=
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 =#
 
 # Overloaded operators belonging to instances of type MType are: ==, ≠, ≈, !
-# Types Int64, Rational{Int64} and Float64 are all subtypes of type Real.
+# Types Int64, Rational{Int64} and Float64 are all sub-types of type Real.
 
 # Operator ==
 
@@ -529,11 +1064,11 @@ function Base.:!(y::MBool)::Bool
 end
 
 #=
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 =#
 
 # Overloaded operators belonging to instances of MNumber are: <, ≤, ≥, >
-# Types Int64, Rational{Int64}, and Float64 are all subtypes of type Real.
+# Types Int64, Rational{Int64}, and Float64 are all sub-types of type Real.
 
 # Operator <
 
@@ -1318,4 +1853,12 @@ function Base.:(exp10)(y::MComplex)::Complex
     return exp10(y.n)
 end
 
-end  #  module MutableTypes
+function Base.:(sqrt)(y::MNumber)::Real
+    return sqrt(y.n)
+end
+
+function Base.:(sqrt)(y::MComplex)::Complex
+    return sqrt(y.n)
+end
+
+end # module MutableTypes
